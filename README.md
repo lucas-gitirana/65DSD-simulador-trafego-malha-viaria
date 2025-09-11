@@ -1,6 +1,4 @@
 # 65DSD-simulador-trafego-malha-viaria
 Repositório do Projeto de Simulador de Tráfego de Malha Viária (65DSD)
 
-Acadêmicos:
-Fernando Alexander Prim
-Lucas Emanoel Gitirana
+**Acadêmicos**: Fernando Alexander Prim e Lucas Emanoel Gitirana
