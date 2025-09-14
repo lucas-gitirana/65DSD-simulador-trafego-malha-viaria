@@ -4,13 +4,17 @@
 
 package com.mycompany.dsd.simulador.trafego;
 
-/**
- *
- * @author gitir
- */
+import com.mycompany.dsd.simulador.trafego.model.Malha;
+import java.io.IOException;
+
 public class App {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        try {
+            Malha malha = new Malha("/malhas/malha-exemplo-1.txt");
+            malha.imprimirMalha();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
