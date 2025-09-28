@@ -18,6 +18,7 @@ public class Veiculo extends Thread {
     private final int velocidade;
     private final Color cor;
     private volatile boolean ativo = true;
+
     private Celula celulaAtual;
 
     public Veiculo(Malha malha, int linhaInicial, int colunaInicial, int velocidade) {
@@ -40,7 +41,6 @@ public class Veiculo extends Thread {
 
         try {
             this.celulaAtual.entrar();
-
             while (ativo) {
                 Thread.sleep(velocidade);
                 mover();
@@ -56,11 +56,31 @@ public class Veiculo extends Thread {
     }
 
     private void mover() throws InterruptedException {
-        // exemplo de movimento sempre  pra direita
         int proximaLinha = linha;
-        int proximaColuna = coluna + 1;
+        int proximaColuna = coluna;
 
-        if (proximaColuna >= malha.getColunas()) {
+        TipoCelula tipoAtual = this.celulaAtual.getTipo();
+
+        switch (tipoAtual) {
+            case ESTRADA_DIREITA:
+                proximaColuna++;
+                break;
+            case ESTRADA_ESQUERDA:
+                proximaColuna--;
+                break;
+            case ESTRADA_CIMA:
+                proximaLinha--;
+                break;
+            case ESTRADA_BAIXO:
+                proximaLinha++;
+                break;
+            default:
+                ativo = false;
+                return;
+        }
+
+        if (proximaLinha < 0 || proximaLinha >= malha.getLinhas() ||
+                proximaColuna < 0 || proximaColuna >= malha.getColunas()) {
             ativo = false;
             return;
         }
@@ -73,10 +93,8 @@ public class Veiculo extends Thread {
         }
 
         proximaCelula.entrar();
-
         this.linha = proximaLinha;
         this.coluna = proximaColuna;
-
         this.celulaAtual.sair();
         this.celulaAtual = proximaCelula;
     }
