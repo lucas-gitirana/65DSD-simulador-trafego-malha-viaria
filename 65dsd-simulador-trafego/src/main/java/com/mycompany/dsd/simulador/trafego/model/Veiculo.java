@@ -4,6 +4,9 @@
  */
 package com.mycompany.dsd.simulador.trafego.model;
 
+import java.awt.Color;
+import java.util.Random;
+
 /**
  *
  * @author gitir
@@ -13,6 +16,7 @@ public class Veiculo extends Thread {
     private int coluna;
     private final Malha malha;
     private final int velocidade;
+    private final Color cor;
     private volatile boolean ativo = true;
 
     public Veiculo(Malha malha, int linhaInicial, int colunaInicial, int velocidade) {
@@ -20,6 +24,9 @@ public class Veiculo extends Thread {
         this.linha = linhaInicial;
         this.coluna = colunaInicial;
         this.velocidade = velocidade;
+        
+        Random rand = new Random();
+        this.cor = new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
     }
 
     @Override
@@ -46,6 +53,7 @@ public class Veiculo extends Thread {
 
     public int getLinha() { return linha; }
     public int getColuna() { return coluna; }
+    public Color getCor() { return cor; }
     public boolean isAtivo() { return ativo; }
     
     

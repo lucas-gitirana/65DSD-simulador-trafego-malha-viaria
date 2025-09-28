@@ -52,9 +52,9 @@ public class MalhaPanel extends javax.swing.JPanel {
         }
 
         // desenhar veículos
-        g.setColor(Color.BLUE);
         for (Veiculo v : simulacao.getVeiculos()) {
             if (v.isAtivo()) {
+                g.setColor(v.getCor());
                 g.fillOval(v.getColuna() * cellSize + 5, v.getLinha() * cellSize + 5,
                            cellSize - 10, cellSize - 10);
             }
