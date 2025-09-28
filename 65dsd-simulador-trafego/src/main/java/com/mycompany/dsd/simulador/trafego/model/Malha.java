@@ -1,5 +1,8 @@
 package com.mycompany.dsd.simulador.trafego.model;
 
+import com.mycompany.dsd.simulador.trafego.controller.ControleCelula;
+import com.mycompany.dsd.simulador.trafego.controller.ControleMonitor;
+import com.mycompany.dsd.simulador.trafego.controller.ControleSemaforo;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -12,14 +15,14 @@ public class Malha {
     private int colunas;
     private Celula[][] grid;
     
-    public Malha(String path) throws IOException {
-        carregarMalha(path);
+    public Malha(String path, boolean usarSemaforos) throws IOException {
+        carregarMalha(path, usarSemaforos);
     }
     
     public int getLinhas() { return linhas; }
     public int getColunas() { return colunas; }
 
-    private void carregarMalha(String path) throws IOException {
+    private void carregarMalha(String path, boolean usarSemaforos) throws IOException {
         try (InputStream is = getClass().getResourceAsStream(path)) {
             if (is == null) {
                 throw new FileNotFoundException("Arquivo não encontrado no classpath: " + path);
@@ -34,7 +37,11 @@ public class Malha {
                     String[] valores = br.readLine().trim().split("\\s+");
                     for (int j = 0; j < colunas; j++) {
                         int valor = Integer.parseInt(valores[j]);
-                        grid[i][j] = new Celula(TipoCelula.fromInt(valor));
+                        TipoCelula tipo = TipoCelula.fromInt(valor);
+                        ControleCelula controle = usarSemaforos ? 
+                            new ControleSemaforo() : new ControleMonitor();
+                        
+                        grid[i][j] = new Celula(tipo, controle);
                     }
                 }
             }
