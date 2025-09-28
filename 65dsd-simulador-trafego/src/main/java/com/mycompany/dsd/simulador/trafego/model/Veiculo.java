@@ -18,43 +18,71 @@ public class Veiculo extends Thread {
     private final int velocidade;
     private final Color cor;
     private volatile boolean ativo = true;
+    private Celula celulaAtual;
 
     public Veiculo(Malha malha, int linhaInicial, int colunaInicial, int velocidade) {
         this.malha = malha;
         this.linha = linhaInicial;
         this.coluna = colunaInicial;
         this.velocidade = velocidade;
-        
+
         Random rand = new Random();
         this.cor = new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
     }
 
     @Override
     public void run() {
-        while (ativo) {
-            mover();
+        this.celulaAtual = malha.getCelula(linha, coluna);
+        if (this.celulaAtual == null) {
+            ativo = false;
+            return;
+        }
 
-            try {
+        try {
+            this.celulaAtual.entrar();
+
+            while (ativo) {
                 Thread.sleep(velocidade);
-            } catch (InterruptedException e) {
-                ativo = false;
+                mover();
+            }
+        } catch (InterruptedException e) {
+            ativo = false;
+            Thread.currentThread().interrupt();
+        } finally {
+            if (this.celulaAtual != null && this.celulaAtual.isOcupada()) {
+                this.celulaAtual.sair();
             }
         }
     }
 
-    private void mover() {
-        // Exemplo: apenas move para a direita
-        if (coluna + 1 < malha.getColunas()) {
-            coluna++;
-        } else {
+    private void mover() throws InterruptedException {
+        // exemplo de movimento sempre  pra direita
+        int proximaLinha = linha;
+        int proximaColuna = coluna + 1;
+
+        if (proximaColuna >= malha.getColunas()) {
             ativo = false;
+            return;
         }
+
+        Celula proximaCelula = malha.getCelula(proximaLinha, proximaColuna);
+
+        if (proximaCelula == null || proximaCelula.getTipo() == TipoCelula.VAZIO) {
+            ativo = false;
+            return;
+        }
+
+        proximaCelula.entrar();
+
+        this.linha = proximaLinha;
+        this.coluna = proximaColuna;
+
+        this.celulaAtual.sair();
+        this.celulaAtual = proximaCelula;
     }
 
     public int getLinha() { return linha; }
     public int getColuna() { return coluna; }
     public Color getCor() { return cor; }
     public boolean isAtivo() { return ativo; }
-    
-    
 }
