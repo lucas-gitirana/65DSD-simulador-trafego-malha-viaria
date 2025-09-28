@@ -12,7 +12,11 @@ import com.mycompany.dsd.simulador.trafego.model.Veiculo;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import javax.swing.KeyStroke;
+import java.awt.Image;
+import java.io.IOException;
+import java.util.EnumMap;
+import java.util.Map;
+import javax.imageio.ImageIO;
 import javax.swing.Timer;
 
 /**
@@ -20,10 +24,12 @@ import javax.swing.Timer;
  * @author gitir
  */
 public class MalhaPanel extends javax.swing.JPanel {
-    
+
     private final Malha malha;
     private final Simulacao simulacao;
     private final int cellSize = 30;
+
+    private final Map<TipoCelula, Image> imagensSetas;
 
     /**
      * Creates new form MalhaPanel
@@ -31,42 +37,62 @@ public class MalhaPanel extends javax.swing.JPanel {
     public MalhaPanel(Malha malha, Simulacao simulacao) {
         this.malha = malha;
         this.simulacao = simulacao;
+        this.imagensSetas = new EnumMap<>(TipoCelula.class);
 
-        // Redesenha a cada 200 ms
+        carregarImagens();
+
         new Timer(200, e -> repaint()).start();
+    }
+
+    /**
+     * Carrega as imagens das setas do classpath para o mapa.
+     */
+    private void carregarImagens() {
+        try {
+            imagensSetas.put(TipoCelula.ESTRADA_CIMA, ImageIO.read(getClass().getResource("/imagens/setaCima.png")));
+            imagensSetas.put(TipoCelula.ESTRADA_BAIXO, ImageIO.read(getClass().getResource("/imagens/setaBaixo.png")));
+            imagensSetas.put(TipoCelula.ESTRADA_DIREITA, ImageIO.read(getClass().getResource("/imagens/setaDireita.png")));
+            imagensSetas.put(TipoCelula.ESTRADA_ESQUERDA, ImageIO.read(getClass().getResource("/imagens/setaEsquerda.png")));
+        } catch (IOException e) {
+            System.err.println("Erro ao carregar imagens das setas.");
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        
-        // desenhar malha
+
         for (int i = 0; i < malha.getLinhas(); i++) {
             for (int j = 0; j < malha.getColunas(); j++) {
                 Celula cel = malha.getCelula(i, j);
-                g.setColor(cel.getTipo() == TipoCelula.VAZIO ? Color.LIGHT_GRAY : Color.WHITE);
+                TipoCelula tipo = cel.getTipo();
+
+                g.setColor(tipo == TipoCelula.VAZIO ? Color.LIGHT_GRAY : Color.WHITE);
                 g.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+
+                if (imagensSetas.containsKey(tipo)) {
+                    g.drawImage(imagensSetas.get(tipo), j * cellSize, i * cellSize, cellSize, cellSize, null);
+                }
+
                 g.setColor(Color.GRAY);
                 g.drawRect(j * cellSize, i * cellSize, cellSize, cellSize);
             }
         }
 
-        // desenhar veículos
         for (Veiculo v : simulacao.getVeiculos()) {
             if (v.isAtivo()) {
                 g.setColor(v.getCor());
                 g.fillOval(v.getColuna() * cellSize + 5, v.getLinha() * cellSize + 5,
-                           cellSize - 10, cellSize - 10);
+                        cellSize - 10, cellSize - 10);
             }
         }
     }
-    
+
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(malha.getColunas() * cellSize, malha.getLinhas() * cellSize);
     }
-    
-    
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -80,12 +106,12 @@ public class MalhaPanel extends javax.swing.JPanel {
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGap(0, 400, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGap(0, 300, Short.MAX_VALUE)
         );
     }// </editor-fold>//GEN-END:initComponents
 
