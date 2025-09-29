@@ -12,6 +12,8 @@ import java.util.Random;
  * @author gitir
  */
 public class Veiculo extends Thread {
+    private static int contadorVeiculos = 0;
+    private final int id;
     private int linha;
     private int coluna;
     private final Malha malha;
@@ -29,6 +31,11 @@ public class Veiculo extends Thread {
 
         Random rand = new Random();
         this.cor = new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
+        this.id = ++contadorVeiculos;
+    }
+
+    public int getVeiculoId() {
+        return id;
     }
 
     @Override

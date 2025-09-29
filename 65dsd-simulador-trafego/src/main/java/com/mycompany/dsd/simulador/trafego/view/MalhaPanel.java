@@ -9,10 +9,8 @@ import com.mycompany.dsd.simulador.trafego.model.Celula;
 import com.mycompany.dsd.simulador.trafego.model.Malha;
 import com.mycompany.dsd.simulador.trafego.model.TipoCelula;
 import com.mycompany.dsd.simulador.trafego.model.Veiculo;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Image;
+
+import java.awt.*;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Map;
@@ -82,9 +80,21 @@ public class MalhaPanel extends javax.swing.JPanel {
 
         for (Veiculo v : simulacao.getVeiculos()) {
             if (v.isAtivo()) {
-                g.setColor(v.getCor());
+                Color corVeiculo = v.getCor();
+                g.setColor(corVeiculo);
                 g.fillOval(v.getColuna() * cellSize + 5, v.getLinha() * cellSize + 5,
                         cellSize - 10, cellSize - 10);
+
+                String idTexto = String.valueOf(v.getVeiculoId());
+                FontMetrics fm = g.getFontMetrics();
+
+                double brilho = (0.299 * corVeiculo.getRed() + 0.587 * corVeiculo.getGreen() + 0.114 * corVeiculo.getBlue());
+                g.setColor(brilho > 128 ? Color.BLACK : Color.WHITE);
+
+                int x = v.getColuna() * cellSize + (cellSize - fm.stringWidth(idTexto)) / 2;
+                int y = v.getLinha() * cellSize + (cellSize - fm.getHeight()) / 2 + fm.getAscent();
+
+                g.drawString(idTexto, x, y);
             }
         }
     }
