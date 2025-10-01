@@ -28,16 +28,24 @@ public class TelaInicial extends javax.swing.JFrame {
         
         btnIniciar.addActionListener(e -> {
             try {
-                malha = new Malha("/malhas/malha-exemplo-1.txt", true);
+                if(simulacao != null){
+                    simulacao.encerrar();
+                }
+
+                malha = new Malha("/malhas/malha-exemplo-3.txt", true);
                 
                 int intervaloInsercao = Integer.parseInt(txtIntervaloMs.getText());
                 int maxVeiculos = Integer.parseInt(txtQtdVeiculos.getText());
                 simulacao = new Simulacao(malha, intervaloInsercao, maxVeiculos);
+
+                malhaPanel.removeAll();
                 
                 MalhaPanel panel = new MalhaPanel(malha, simulacao);
                 malhaPanel.setLayout(new BorderLayout());
                 malhaPanel.add(panel, BorderLayout.CENTER);
                 malhaPanel.revalidate();
+
+                pack();
             } catch (Exception exc) {
                 exc.printStackTrace();
             }
