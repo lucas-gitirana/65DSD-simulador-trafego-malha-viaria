@@ -124,47 +124,69 @@ public class Veiculo extends Thread {
 
         TipoCelula tipoAtual = this.celulaAtual.getTipo();
 
-        switch (tipoAtual) {
-            case ESTRADA_DIREITA:
-                proximaColuna++;
-                break;
-            case ESTRADA_ESQUERDA:
-                proximaColuna--;
-                break;
-            case ESTRADA_CIMA:
-                proximaLinha--;
-                break;
-            case ESTRADA_BAIXO:
-                proximaLinha++;
-                break;
-            // 🔹 Tratamento especial para cruzamentos
-            default:
-                Point destino = decidirProximoPassoCruzamento(tipoAtual);
+        if (malha.isCruzamento(tipoAtual)) {
+            // Tentativa de múltiplos tries antes de desistir
+            final int tentativasMax = 5;
+            Point destino = null;
+            for (int tent = 0; tent < tentativasMax && destino == null; tent++) {
+                destino = decidirProximoPassoCruzamento(tipoAtual);
                 if (destino == null) {
+                    // Espera um pouco antes de tentar novamente
+                    Thread.sleep(BACKOFF_MIN_MS + rnd.nextInt(BACKOFF_MAX_MS - BACKOFF_MIN_MS));
+                }
+            }
+            if (destino == null) {
+                System.out.println("Veículo morreu no cruzamento (" + linha + "," + coluna + ") - sem saída livre.");
+                ativo = false;
+                return;
+            }
+            proximaLinha = destino.y;
+            proximaColuna = destino.x;
+        } else {
+            switch (tipoAtual) {
+                case ESTRADA_DIREITA:
+                    proximaColuna++;
+                    break;
+                case ESTRADA_ESQUERDA:
+                    proximaColuna--;
+                    break;
+                case ESTRADA_CIMA:
+                    proximaLinha--;
+                    break;
+                case ESTRADA_BAIXO:
+                    proximaLinha++;
+                    break;
+                default:
+                    System.out.println("Veículo morreu em (" + linha + "," + coluna + ") - tipo desconhecido.");
                     ativo = false;
                     return;
-                }
-                proximaLinha = destino.y;
-                proximaColuna = destino.x;
-                break;
+            }
         }
 
-        // 🔹 Checagem de limites
+        // Checagem de limites
         if (proximaLinha < 0 || proximaLinha >= malha.getLinhas() ||
                 proximaColuna < 0 || proximaColuna >= malha.getColunas()) {
+            System.out.println("Veículo morreu ao sair da malha (" + proximaLinha + "," + proximaColuna + ").");
             ativo = false;
             return;
         }
 
         Celula proximaCelula = malha.getCelula(proximaLinha, proximaColuna);
 
-        // 🔹 Evitar desaparecer em células vazias
+        // Evitar desaparecer em células vazias
         if (proximaCelula == null || proximaCelula.getTipo() == TipoCelula.VAZIO) {
+            System.out.println("Veículo morreu em célula vazia (" + proximaLinha + "," + proximaColuna + ").");
             ativo = false;
             return;
         }
 
-        proximaCelula.entrar();
+        // Usa tentarEntrar para evitar deadlock
+        boolean entrou = proximaCelula.tentarEntrar(TIMEOUT_POR_CELULA_MS);
+        if (!entrou) {
+            // Faz backoff pequeno e tenta novamente na próxima iteração do loop principal
+            Thread.sleep(BACKOFF_MIN_MS + rnd.nextInt(BACKOFF_MAX_MS - BACKOFF_MIN_MS));
+            return;
+        }
 
         this.linha = proximaLinha;
         this.coluna = proximaColuna;
