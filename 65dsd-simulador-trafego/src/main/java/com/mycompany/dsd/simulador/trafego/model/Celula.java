@@ -18,6 +18,10 @@ public class Celula {
     public void entrar() throws InterruptedException {
         controle.entrar();
     }
+    
+    public boolean tentarEntrar(long timeoutMs) throws InterruptedException {
+        return controle.tentarEntrar(timeoutMs);
+    }
 
     public void sair() {
         controle.sair();

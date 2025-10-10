@@ -5,6 +5,7 @@
 package com.mycompany.dsd.simulador.trafego.controller;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -26,6 +27,11 @@ public class ControleSemaforo implements ControleCelula {
     @Override
     public boolean isOcupada() {
         return semaforo.availablePermits() == 0;
+    }
+
+    @Override
+    public boolean tentarEntrar(long timeoutMs) throws InterruptedException {
+        return semaforo.tryAcquire(timeoutMs, TimeUnit.MILLISECONDS);
     }
     
 }

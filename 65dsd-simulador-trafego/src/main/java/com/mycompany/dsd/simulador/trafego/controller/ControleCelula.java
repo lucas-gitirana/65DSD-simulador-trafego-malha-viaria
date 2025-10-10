@@ -12,4 +12,5 @@ public interface ControleCelula {
     void entrar() throws InterruptedException;
     void sair();
     boolean isOcupada();
+    boolean tentarEntrar(long timeoutMs) throws InterruptedException;
 }
