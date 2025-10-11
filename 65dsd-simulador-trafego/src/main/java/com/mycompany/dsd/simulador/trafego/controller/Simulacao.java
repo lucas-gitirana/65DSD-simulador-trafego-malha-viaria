@@ -37,6 +37,9 @@ public class Simulacao extends Thread {
     @Override
     public void run() {
         while (rodando) {
+
+            veiculos.removeIf(v -> !v.isAtivo());
+
             if (inserindo && veiculos.size() < maxVeiculos) {
                 List<Point> pontosDeEntrada = malha.getPontosDeEntrada();
 

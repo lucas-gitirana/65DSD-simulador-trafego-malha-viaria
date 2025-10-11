@@ -8,8 +8,11 @@ import java.awt.Color;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Collections;
 import java.util.Random;
+import java.util.Set;
 
 /**
  *
@@ -27,11 +30,13 @@ public class Veiculo extends Thread {
 
     private Celula celulaAtual;
     private Point ultimaPosicao = null;
-    
+
     private final Random rnd = new Random();
     private static final long TIMEOUT_POR_CELULA_MS = 300; //ajustar
     private static final int BACKOFF_MIN_MS = 100;
     private static final int BACKOFF_MAX_MS = 300;
+
+    private List<Point> pathReservado = null;
 
     public Veiculo(Malha malha, int linhaInicial, int colunaInicial, int velocidade) {
         this.malha = malha;
@@ -72,77 +77,45 @@ public class Veiculo extends Thread {
         }
     }
 
-//    private void mover() throws InterruptedException {
-//        int proximaLinha = linha;
-//        int proximaColuna = coluna;
-//
-//        TipoCelula tipoAtual = this.celulaAtual.getTipo();
-//
-//        switch (tipoAtual) {
-//            case ESTRADA_DIREITA:
-//                proximaColuna++;
-//                break;
-//            case ESTRADA_ESQUERDA:
-//                proximaColuna--;
-//                break;
-//            case ESTRADA_CIMA:
-//                proximaLinha--;
-//                break;
-//            case ESTRADA_BAIXO:
-//                proximaLinha++;
-//                break;
-//            default:
-//                ativo = false;
-//                return;
-//        }
-//
-//        if (proximaLinha < 0 || proximaLinha >= malha.getLinhas() ||
-//                proximaColuna < 0 || proximaColuna >= malha.getColunas()) {
-//            ativo = false;
-//            return;
-//        }
-//
-//        Celula proximaCelula = malha.getCelula(proximaLinha, proximaColuna);
-//
-//        if (proximaCelula == null || proximaCelula.getTipo() == TipoCelula.VAZIO) {
-//            ativo = false;
-//            return;
-//        }
-//
-//        proximaCelula.entrar();
-//
-//        this.linha = proximaLinha;
-//        this.coluna = proximaColuna;
-//        this.celulaAtual.sair();
-//        this.celulaAtual = proximaCelula;
-//    }
-    
-    
     private void mover() throws InterruptedException {
+        if (pathReservado != null && !pathReservado.isEmpty()) {
+            // Continuar movendo pelo caminho reservado
+            Point destino = pathReservado.get(0);
+            int proximaLinha = destino.y;
+            int proximaColuna = destino.x;
+
+            Celula proximaCelula = malha.getCelula(proximaLinha, proximaColuna);
+
+            if (proximaCelula == null) {
+                ativo = false;
+                return;
+            }
+
+            // Como já reservado, não precisa tentarEntrar novamente
+            int oldLinha = this.linha;
+            int oldColuna = this.coluna;
+
+            this.linha = proximaLinha;
+            this.coluna = proximaColuna;
+            this.celulaAtual.sair();
+            ultimaPosicao = new Point(oldColuna, oldLinha);
+            this.celulaAtual = proximaCelula;
+
+            pathReservado.remove(0);
+            if (pathReservado.isEmpty()) {
+                pathReservado = null;
+            }
+            return;
+        }
+
         int proximaLinha = linha;
         int proximaColuna = coluna;
 
         TipoCelula tipoAtual = this.celulaAtual.getTipo();
 
-        if (malha.isCruzamento(tipoAtual)) {
-            // Tentativa de múltiplos tries antes de desistir
-            final int tentativasMax = 5;
-            Point destino = null;
-            for (int tent = 0; tent < tentativasMax && destino == null; tent++) {
-                destino = decidirProximoPassoCruzamento(tipoAtual);
-                if (destino == null) {
-                    // Espera um pouco antes de tentar novamente
-                    Thread.sleep(BACKOFF_MIN_MS + rnd.nextInt(BACKOFF_MAX_MS - BACKOFF_MIN_MS));
-                }
-            }
-            if (destino == null) {
-                System.out.println("Veículo morreu no cruzamento (" + linha + "," + coluna + ") - sem saída livre.");
-                ativo = false;
-                return;
-            }
-            proximaLinha = destino.y;
-            proximaColuna = destino.x;
-        } else {
+        boolean isCurrentCruzamento = malha.isCruzamento(tipoAtual);
+
+        if (!isCurrentCruzamento) {
             switch (tipoAtual) {
                 case ESTRADA_DIREITA:
                     proximaColuna++;
@@ -180,80 +153,201 @@ public class Veiculo extends Thread {
             return;
         }
 
-        // Usa tentarEntrar para evitar deadlock
+        boolean needsReservation = malha.isCruzamento(proximaCelula.getTipo()) || isCurrentCruzamento;
+
+        if (needsReservation) {
+            // Lógica para cruzamentos: decidir e reservar caminho completo
+            Point startPoint = isCurrentCruzamento ? new Point(coluna, linha) : new Point(proximaColuna, proximaLinha);
+            Point anterior = isCurrentCruzamento ? ultimaPosicao : new Point(coluna, linha);
+
+            Set<Point> visited = new HashSet<>();
+            List<List<Point>> possiblePaths = encontrarCaminhosPossiveis(startPoint, anterior, visited);
+
+            if (possiblePaths.isEmpty()) {
+                System.out.println("Veículo morreu no cruzamento (" + linha + "," + coluna + ") - sem saída livre.");
+                ativo = false;
+                return;
+            }
+
+            // Embaralhar para escolha aleatória
+            Collections.shuffle(possiblePaths, rnd);
+
+            boolean reservado = false;
+            for (List<Point> path : possiblePaths) {
+                if (reservarCaminho(path, TIMEOUT_POR_CELULA_MS)) {
+                    pathReservado = new ArrayList<>(path);
+                    reservado = true;
+                    break;
+                }
+            }
+
+            if (!reservado) {
+                // Backoff e tenta na próxima iteração
+                Thread.sleep(BACKOFF_MIN_MS + rnd.nextInt(BACKOFF_MAX_MS - BACKOFF_MIN_MS));
+                return;
+            }
+
+            // Agora mover para o primeiro do path (se current já é start, então path começa com próximo)
+            if (isCurrentCruzamento) {
+                // Já está no start, então o path inclui o current como primeiro? Não, o path é from start, mas como já está, move para o próximo
+                // Mas encontrarCaminhosPossiveis inclui start como primeiro no path
+                // Então, como já está no start, remove(0) e move para o próximo se não vazio
+                Point first = pathReservado.get(0);
+                if (first.y != linha || first.x != coluna) {
+                    // Erro
+                    ativo = false;
+                    return;
+                }
+                pathReservado.remove(0);
+                if (pathReservado.isEmpty()) {
+                    pathReservado = null;
+                    // Nada a mover, mas deve mover para fora? Se path tinha só [start], mas se só start, significa no cruzamento sem saida, mas filtered
+                    return;
+                }
+            }
+
+            // Mover para o próximo (primeiro do path agora)
+            Point destino = pathReservado.get(0);
+            proximaLinha = destino.y;
+            proximaColuna = destino.x;
+            proximaCelula = malha.getCelula(proximaLinha, proximaColuna);
+
+            int oldLinha = this.linha;
+            int oldColuna = this.coluna;
+
+            this.linha = proximaLinha;
+            this.coluna = proximaColuna;
+            this.celulaAtual.sair();
+            ultimaPosicao = new Point(oldColuna, oldLinha);
+            this.celulaAtual = proximaCelula;
+
+            pathReservado.remove(0);
+            if (pathReservado.isEmpty()) {
+                pathReservado = null;
+            }
+            return;
+        }
+
+        // Movimento normal fora de cruzamentos
         boolean entrou = proximaCelula.tentarEntrar(TIMEOUT_POR_CELULA_MS);
         if (!entrou) {
-            // Faz backoff pequeno e tenta novamente na próxima iteração do loop principal
+            // Backoff e tenta na próxima iteração
             Thread.sleep(BACKOFF_MIN_MS + rnd.nextInt(BACKOFF_MAX_MS - BACKOFF_MIN_MS));
             return;
         }
 
+        int oldLinha = this.linha;
+        int oldColuna = this.coluna;
+
         this.linha = proximaLinha;
         this.coluna = proximaColuna;
         this.celulaAtual.sair();
-        ultimaPosicao = new Point(coluna, linha);
+        ultimaPosicao = new Point(oldColuna, oldLinha);
         this.celulaAtual = proximaCelula;
     }
-    
-    private Point decidirProximoPassoCruzamento(TipoCelula tipo) {
+
+    private List<List<Point>> encontrarCaminhosPossiveis(Point entrada, Point anterior, Set<Point> visited) {
+        List<List<Point>> paths = new ArrayList<>();
+
+        if (visited.contains(entrada)) {
+            return paths;
+        }
+
+        visited.add(entrada);
+
+        Celula cel = malha.getCelula(entrada.y, entrada.x);
+        TipoCelula tipo = cel.getTipo();
+
+        if (!malha.isCruzamento(tipo)) {
+            visited.remove(entrada);
+            return paths;
+        }
+
+        List<Point> opcoes = getDirecoesPossiveis(entrada.y, entrada.x, anterior);
+
+        for (Point prox : opcoes) {
+            Celula proxCel = malha.getCelula(prox.y, prox.x);
+
+            if (malha.isCruzamento(proxCel.getTipo())) {
+                Set<Point> newVisited = new HashSet<>(visited);
+                List<List<Point>> subPaths = encontrarCaminhosPossiveis(prox, entrada, newVisited);
+                for (List<Point> sub : subPaths) {
+                    List<Point> full = new ArrayList<>();
+                    full.add(entrada);
+                    full.addAll(sub);
+                    paths.add(full);
+                }
+            } else {
+                // Saída para estrada
+                List<Point> path = new ArrayList<>();
+                path.add(entrada);
+                path.add(prox);
+                paths.add(path);
+            }
+        }
+
+        visited.remove(entrada);
+        return paths;
+    }
+
+    private List<Point> getDirecoesPossiveis(int lin, int col, Point anterior) {
+        Celula cel = malha.getCelula(lin, col);
+        TipoCelula tipo = cel.getTipo();
+
         List<Point> opcoes = new ArrayList<>();
 
-        // 🔹 Pega direções válidas a partir do tipo de cruzamento
+        // Copiado da lógica original de decidirProximoPassoCruzamento
         switch (tipo) {
             case CRUZAMENTO_CIMA:
             case CRUZAMENTO_CIMA_DIREITA:
             case CRUZAMENTO_CIMA_ESQUERDA:
-                opcoes.add(new Point(coluna, linha - 1)); // cima
+                opcoes.add(new Point(col, lin - 1)); // cima
                 break;
         }
         switch (tipo) {
             case CRUZAMENTO_BAIXO:
             case CRUZAMENTO_BAIXO_ESQUERDA:
             case CRUZAMENTO_DIREITA_BAIXO:
-                opcoes.add(new Point(coluna, linha + 1)); // baixo
+                opcoes.add(new Point(col, lin + 1)); // baixo
                 break;
         }
         switch (tipo) {
             case CRUZAMENTO_DIREITA:
             case CRUZAMENTO_CIMA_DIREITA:
             case CRUZAMENTO_DIREITA_BAIXO:
-                opcoes.add(new Point(coluna + 1, linha)); // direita
+                opcoes.add(new Point(col + 1, lin)); // direita
                 break;
         }
         switch (tipo) {
             case CRUZAMENTO_ESQUERDA:
             case CRUZAMENTO_CIMA_ESQUERDA:
             case CRUZAMENTO_BAIXO_ESQUERDA:
-                opcoes.add(new Point(coluna - 1, linha)); // esquerda
+                opcoes.add(new Point(col - 1, lin)); // esquerda
                 break;
         }
 
-        // 🔹 Filtra opções válidas (dentro da malha e não vazias)
-        List<Point> validas = new ArrayList<>();
-        for (Point p : opcoes) {
-            Celula c = malha.getCelula(p.y, p.x);
-            if (c != null && c.getTipo() != TipoCelula.VAZIO && !c.isOcupada()) {
-                validas.add(p);
+        // Remover anterior se existir
+        if (anterior != null) {
+            opcoes.removeIf(p -> p.equals(anterior));
+        }
+
+        // Filtrar válidas: dentro dos limites e não vazias (mas não checar ocupada, pois vamos reservar)
+        opcoes.removeIf(p -> {
+            if (p.y < 0 || p.y >= malha.getLinhas() || p.x < 0 || p.x >= malha.getColunas()) {
+                return true;
             }
-        }
+            Celula c = malha.getCelula(p.y, p.x);
+            return c == null || c.getTipo() == TipoCelula.VAZIO;
+        });
 
-        if (validas.isEmpty()) return null;
-        
-        if (ultimaPosicao != null) {
-            validas.removeIf(p -> p.equals(ultimaPosicao));
-        }
-
-
-        // 🔹 Escolhe aleatoriamente uma direção válida
-        return validas.get(new Random().nextInt(validas.size()));
+        return opcoes;
     }
-
 
     public int getLinha() { return linha; }
     public int getColuna() { return coluna; }
     public Color getCor() { return cor; }
     public boolean isAtivo() { return ativo; }
-    
+
     private boolean reservarCaminho(List<Point> path, long timeoutPorCelulaMs) throws InterruptedException {
         // Ordem consistente para reduzir deadlocks: ordenar por (row, col)
         List<Point> ordered = new ArrayList<>(path);
@@ -262,7 +356,7 @@ public class Veiculo extends Thread {
         List<Point> adquiridas = new ArrayList<>();
         try {
             for (Point p : ordered) {
-                Celula cel = malha.getCelula(p.x, p.y);
+                Celula cel = malha.getCelula(p.y, p.x);
                 boolean ok = cel.tentarEntrar(timeoutPorCelulaMs);
                 if (!ok) {
                     return false;
@@ -274,9 +368,9 @@ public class Veiculo extends Thread {
             if (!adquiridas.isEmpty() && adquiridas.size() != ordered.size()) {
                 // se não adquiriu todas, libera as já obtidas
                 for (Point p : adquiridas) {
-                    malha.getCelula(p.x, p.y).sair();
+                    malha.getCelula(p.y, p.x).sair();
                 }
             }
+        }
     }
-}
 }

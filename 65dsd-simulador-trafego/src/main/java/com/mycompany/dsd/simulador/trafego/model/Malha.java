@@ -100,29 +100,52 @@ public class Malha {
         return t.ordinal() >= TipoCelula.CRUZAMENTO_CIMA.ordinal() &&
                t.ordinal() <= TipoCelula.CRUZAMENTO_BAIXO_ESQUERDA.ordinal();
     }
-    
-    /**
-    * Retorna os deltas (dr, dc) possíveis de saída a partir da célula de cruzamento,
-    * excluindo a direção de onde o veículo veio (entryFromRow, entryFromCol).
-    * Cada delta é um int[2] {dr, dc}.
-    */
+
     public List<int[]> getPossibleExitDeltas(int crossRow, int crossCol, int entryFromRow, int entryFromCol) {
-        List<int[]> exits = new ArrayList<>();
-        // 4 direções: cima(-1,0), direita(0,+1), baixo(+1,0), esquerda(0,-1)
-        int[][] all = { {-1,0}, {0,1}, {1,0}, {0,-1} };
-        for (int[] d : all) {
-            int nr = crossRow + d[0];
-            int nc = crossCol + d[1];
-            if (nr < 0 || nr >= linhas || nc < 0 || nc >= colunas) continue;
-            // não voltar para a célula de onde veio
-            if (nr == entryFromRow && nc == entryFromCol) continue;
-            Celula c = getCelula(nr, nc);
-            if (c != null && c.getTipo() != TipoCelula.VAZIO) {
-                // consideramos como saída válida
-                exits.add(d);
+        TipoCelula tipoCruzamento = getCelula(crossRow, crossCol).getTipo();
+        List<int[]> potentialExits = new ArrayList<>();
+
+        // Adiciona as saídas permitidas com base no tipo do cruzamento
+        switch (tipoCruzamento) {
+            case CRUZAMENTO_CIMA:
+            case CRUZAMENTO_CIMA_DIREITA:
+            case CRUZAMENTO_CIMA_ESQUERDA:
+                potentialExits.add(new int[]{-1, 0}); // Cima
+                break;
+        }
+        switch (tipoCruzamento) {
+            case CRUZAMENTO_DIREITA:
+            case CRUZAMENTO_CIMA_DIREITA:
+            case CRUZAMENTO_DIREITA_BAIXO:
+                potentialExits.add(new int[]{0, 1});  // Direita
+                break;
+        }
+        switch (tipoCruzamento) {
+            case CRUZAMENTO_BAIXO:
+            case CRUZAMENTO_DIREITA_BAIXO:
+            case CRUZAMENTO_BAIXO_ESQUERDA:
+                potentialExits.add(new int[]{1, 0});  // Baixo
+                break;
+        }
+        switch (tipoCruzamento) {
+            case CRUZAMENTO_ESQUERDA:
+            case CRUZAMENTO_CIMA_ESQUERDA:
+            case CRUZAMENTO_BAIXO_ESQUERDA:
+                potentialExits.add(new int[]{0, -1}); // Esquerda
+                break;
+        }
+
+        // Filtra a lista, removendo a direção de onde o veículo veio
+        List<int[]> finalExits = new ArrayList<>();
+        for (int[] delta : potentialExits) {
+            int exitRow = crossRow + delta[0];
+            int exitCol = crossCol + delta[1];
+            if (exitRow != entryFromRow || exitCol != entryFromCol) {
+                finalExits.add(delta);
             }
         }
-        return exits;
+
+        return finalExits;
     }
     
     /**

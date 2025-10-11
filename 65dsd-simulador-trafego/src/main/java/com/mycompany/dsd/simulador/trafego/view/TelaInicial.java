@@ -32,7 +32,7 @@ public class TelaInicial extends javax.swing.JFrame {
                     simulacao.encerrar();
                 }
 
-                malha = new Malha("/malhas/malha-exemplo-3.txt", false);
+                malha = new Malha("/malhas/malha-teste.txt", false);
                 
                 int intervaloInsercao = Integer.parseInt(txtIntervaloMs.getText());
                 int maxVeiculos = Integer.parseInt(txtQtdVeiculos.getText());
