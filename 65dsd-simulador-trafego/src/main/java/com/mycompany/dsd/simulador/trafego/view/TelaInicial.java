@@ -3,6 +3,7 @@ package com.mycompany.dsd.simulador.trafego.view;
 import com.mycompany.dsd.simulador.trafego.controller.Simulacao;
 import com.mycompany.dsd.simulador.trafego.model.Malha;
 import java.awt.BorderLayout;
+import javax.swing.JOptionPane;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -31,8 +32,21 @@ public class TelaInicial extends javax.swing.JFrame {
                 if(simulacao != null){
                     simulacao.encerrar();
                 }
-
-                malha = new Malha("/malhas/malha-teste.txt", false);
+                
+                if (txtIntervaloMs.getText().isBlank() || txtQtdVeiculos.getText().isBlank()) {
+                    JOptionPane.showMessageDialog(rootPane, "Informe um intervalo de inserção e a quantidade máxima de veículos");
+                }
+                
+                String[] malhas = {
+                    "malha-exemplo-1.txt", 
+                    "malha-exemplo-2.txt", 
+                    "malha-exemplo-3.txt", 
+                    "malha-teste.txt"
+                };
+                
+                int indexMalha = selMalhas.getSelectedIndex();
+                boolean usaSemaforo = (radioGroupExclusaoMutua.getSelection().getActionCommand()).equals("true");
+                malha = new Malha("/malhas/" + malhas[indexMalha], usaSemaforo);
                 
                 int intervaloInsercao = Integer.parseInt(txtIntervaloMs.getText());
                 int maxVeiculos = Integer.parseInt(txtQtdVeiculos.getText());
@@ -44,12 +58,10 @@ public class TelaInicial extends javax.swing.JFrame {
                 malhaPanel.setLayout(new BorderLayout());
                 malhaPanel.add(panel, BorderLayout.CENTER);
                 malhaPanel.revalidate();
-
-                pack();
+                malhaPanel.repaint();
             } catch (Exception exc) {
                 exc.printStackTrace();
             }
-            
             
             simulacao.iniciarInsercao();
             if (!simulacao.isAlive()) simulacao.start();
@@ -68,37 +80,47 @@ public class TelaInicial extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        radioGroupExclusaoMutua = new javax.swing.ButtonGroup();
         jLabel1 = new javax.swing.JLabel();
         txtQtdVeiculos = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         txtIntervaloMs = new javax.swing.JTextField();
         btnIniciar = new javax.swing.JButton();
         btnParar = new javax.swing.JButton();
-        btnEncerrar = new javax.swing.JButton();
         malhaPanel = new javax.swing.JPanel();
+        radioMonitor = new javax.swing.JRadioButton();
+        radioSemaforo = new javax.swing.JRadioButton();
+        selMalhas = new javax.swing.JComboBox<>();
+        btnEncerrar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jLabel1.setText("Quantidade máxima de veículos:");
 
+        txtQtdVeiculos.setText("100");
+
         jLabel2.setText("Intervalo de inserção (ms):");
 
+        txtIntervaloMs.setText("1000");
+        txtIntervaloMs.setToolTipText("");
         txtIntervaloMs.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtIntervaloMsActionPerformed(evt);
             }
         });
 
-        btnIniciar.setText("Iniciar");
+        btnIniciar.setBackground(new java.awt.Color(153, 255, 153));
+        btnIniciar.setText("Iniciar ▶️");
 
-        btnParar.setText("Parar inserção");
+        btnParar.setBackground(new java.awt.Color(204, 255, 255));
+        btnParar.setText("Interromper 🚫");
+        btnParar.setToolTipText("Interromper a inserção de veículos na malha");
+        btnParar.setActionCommand("Parar");
         btnParar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnPararActionPerformed(evt);
             }
         });
-
-        btnEncerrar.setText("Encerrar Simulação");
 
         javax.swing.GroupLayout malhaPanelLayout = new javax.swing.GroupLayout(malhaPanel);
         malhaPanel.setLayout(malhaPanelLayout);
@@ -108,8 +130,28 @@ public class TelaInicial extends javax.swing.JFrame {
         );
         malhaPanelLayout.setVerticalGroup(
             malhaPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 459, Short.MAX_VALUE)
+            .addGap(0, 760, Short.MAX_VALUE)
         );
+
+        radioGroupExclusaoMutua.add(radioMonitor);
+        radioMonitor.setSelected(true);
+        radioMonitor.setActionCommand("false");
+        radioMonitor.setLabel("Monitor");
+        radioMonitor.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                radioMonitorActionPerformed(evt);
+            }
+        });
+
+        radioGroupExclusaoMutua.add(radioSemaforo);
+        radioSemaforo.setActionCommand("true");
+        radioSemaforo.setLabel("Semáforo");
+
+        selMalhas.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Malha 1", "Malha 2", "Malha 3", "Malha Teste" }));
+
+        btnEncerrar.setBackground(new java.awt.Color(255, 153, 153));
+        btnEncerrar.setText("Encerrar ⏹️");
+        btnEncerrar.setToolTipText("Encerrar a simulação, matando TODOS os veículos da malha");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -119,24 +161,31 @@ public class TelaInicial extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel1))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txtIntervaloMs, javax.swing.GroupLayout.DEFAULT_SIZE, 76, Short.MAX_VALUE)
+                            .addComponent(txtQtdVeiculos))
+                        .addGap(34, 34, 34)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(selMalhas, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(radioMonitor)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(radioSemaforo)))
+                        .addGap(41, 41, 41)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(btnParar)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnEncerrar))
+                            .addComponent(btnIniciar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(85, 85, 85))
+                    .addGroup(layout.createSequentialGroup()
                         .addComponent(malhaPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addContainerGap())
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(txtQtdVeiculos, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jLabel2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(txtIntervaloMs, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
-                        .addGap(240, 240, 240))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(btnIniciar)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(btnParar)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(btnEncerrar)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addContainerGap())))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -145,16 +194,19 @@ public class TelaInicial extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(txtQtdVeiculos, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2)
-                    .addComponent(txtIntervaloMs, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(selMalhas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnIniciar))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnIniciar)
+                    .addComponent(txtIntervaloMs, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2)
+                    .addComponent(radioMonitor)
+                    .addComponent(radioSemaforo)
                     .addComponent(btnParar)
                     .addComponent(btnEncerrar))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(malhaPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
+                .addGap(18, 18, 18)
+                .addComponent(malhaPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -167,6 +219,10 @@ public class TelaInicial extends javax.swing.JFrame {
     private void btnPararActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPararActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_btnPararActionPerformed
+
+    private void radioMonitorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_radioMonitorActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_radioMonitorActionPerformed
 
     /**
      * @param args the command line arguments
@@ -200,6 +256,10 @@ public class TelaInicial extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel malhaPanel;
+    private javax.swing.ButtonGroup radioGroupExclusaoMutua;
+    private javax.swing.JRadioButton radioMonitor;
+    private javax.swing.JRadioButton radioSemaforo;
+    private javax.swing.JComboBox<String> selMalhas;
     private javax.swing.JTextField txtIntervaloMs;
     private javax.swing.JTextField txtQtdVeiculos;
     // End of variables declaration//GEN-END:variables
